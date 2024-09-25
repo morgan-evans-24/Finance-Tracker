@@ -5,6 +5,10 @@ import java.util.ArrayList;
 import org.jfree.chart.ChartFactory;
 import org.jfree.chart.ChartPanel;
 import org.jfree.chart.JFreeChart; // Should not show an error if JAR is included correctly
+
+import org.jfree.chart.plot.CenterTextMode;
+import org.jfree.chart.plot.RingPlot;
+import org.jfree.chart.renderer.category.StackedBarRenderer;
 import org.jfree.data.general.DefaultPieDataset;
 
 
@@ -38,9 +42,9 @@ public class TrackerMain {
     JLabel incomeTotalLabel = new JLabel();
     JLabel expenseTotalLabel = new JLabel();
 
-    ArrayList<Transaction> expenses = new ArrayList<Transaction>();
-    ArrayList<Transaction> incomes = new ArrayList<Transaction>();
-    ArrayList<TransactionCategory> categories = new ArrayList<TransactionCategory>();
+    ArrayList<Transaction> expenses = new ArrayList<>();
+    ArrayList<Transaction> incomes = new ArrayList<>();
+    ArrayList<TransactionCategory> categories = new ArrayList<>();
 
 
 
@@ -52,16 +56,17 @@ public class TrackerMain {
         expenseGridPanel.setLayout(new GridLayout());
         incomeGridPanel.setLayout(new GridLayout());
 
-        //TESTING
-        addTransaction(new Transaction(140, "new laptop", "asdasd", "07/08/1990", 1, "School", true));
-        addTransaction(new Transaction(132, "shopping", "asdasd", "07/08/1990", 1, "Groceries", true));
-        addTransaction(new Transaction(80, "repairs", "asdasd", "07/08/1990", 1, "Car", true));
-        addTransaction(new Transaction(250, "More shopping", "asdasd", "07/08/1990", 1, "Groceries", true));
-        addTransaction(new Transaction(80, "fuel", "asdasd", "07/08/1990", 1, "Car", true));
-        addTransaction(new Transaction(300, "loans", "asdasd", "07/08/1990", 1, "School", true));
+//        //TESTING
+//        addTransaction(new Transaction(140, "new laptop", "asdasd", "07/08/1990", 1, "School", true));
+//        addTransaction(new Transaction(132, "shopping", "asdasd", "07/08/1990", 1, "Groceries", true));
+//        addTransaction(new Transaction(80, "repairs", "asdasd", "07/08/1990", 1, "Car", true));
+//        addTransaction(new Transaction(250, "More shopping", "asdasd", "07/08/1990", 1, "Groceries", true));
+//        addTransaction(new Transaction(80, "fuel", "asdasd", "07/08/1990", 1, "Car", true));
+//        addTransaction(new Transaction(300, "loans", "asdasd", "07/08/1990", 1, "School", true));
+//        addTransaction(new Transaction(1500, "Job", "asdasd", "07/08/1990", 1, "Job", false));
         sortExpensesByCategory();
 
-        makePieChart();
+        makeRingChart();
 
 
         navbarInit();
@@ -78,14 +83,14 @@ public class TrackerMain {
 
         expenseButton = new JButton("add expense");
         expenseButton.addActionListener(e -> {
-            ListedTransaction listedTransaction = new ListedTransaction(expenseGridPanel, true, this);
+            new ListedTransaction(expenseGridPanel, true, this);
             frame.validate();
             frame.repaint();
 
         });
         incomeButton = new JButton("add income");
         incomeButton.addActionListener(e -> {
-            ListedTransaction listedTransaction = new ListedTransaction(incomeGridPanel, false, this);
+            new ListedTransaction(incomeGridPanel, false, this);
             frame.validate();
             frame.repaint();
 
@@ -113,14 +118,17 @@ public class TrackerMain {
 
     }
 
-    private void makePieChart() {
+    private void makeRingChart() {
 
         DefaultPieDataset dataset = new DefaultPieDataset();
 
         String currentCategory = "";
         double currentTotal = 0.0;
+        double totalExpenses = 0.0;
+        double totalIncome;
 
         for (int i = 0; i < expenses.size(); i++) {
+            totalExpenses += expenses.get(i).getCost();
             if (i == 0) {      //Returns true if expense, false if income
                 currentCategory = expenses.get(i).getCategory();
                 currentTotal = expenses.get(i).getCost();
@@ -138,17 +146,65 @@ public class TrackerMain {
         }
         dataset.setValue(currentCategory, currentTotal);
 
+        currentTotal = 0.0;
+
+        for (Transaction income : incomes) {
+            currentTotal += income.getCost();
+        }
+        totalIncome = currentTotal;
+        dataset.setValue("Income", totalIncome-totalExpenses);
+
           //USE ARRAYLIST OF OBJECTS "TRANSACTIONS" TO TRACK THIS
 
-        JFreeChart chart = ChartFactory.createPieChart(
-                "Test",
+        JFreeChart chart = ChartFactory.createRingChart(
+                "Test Ring Chart",
                 dataset,
-                true,
+                false,
                 true,
                 false
         );
 
-        chartPanel = new ChartPanelWithCircle(chart);
+
+        RingPlot plot = (RingPlot) chart.getPlot();
+        currentCategory = "";
+        for (int i = 0; i < expenses.size(); i++) {
+            if (i == 0) {
+                currentCategory = expenses.get(i).getCategory();
+                continue;
+            }
+            if (!expenses.get(i).getCategory().equals(currentCategory)) {
+                plot.setSectionOutlinePaint(currentCategory, Color.black);
+                plot.setSectionOutlineStroke(currentCategory, new BasicStroke(2.0f));
+                currentCategory = expenses.get(i).getCategory();
+            }
+        }
+
+        plot.setShadowPaint(null);
+        plot.setSectionOutlinePaint(currentCategory, Color.black);
+        plot.setSectionOutlineStroke(currentCategory, new BasicStroke(2.0f));
+        plot.setOutlineVisible(false);
+        plot.setLabelFont(new Font("Arial", Font.BOLD, 22));
+
+
+        plot.setLabelBackgroundPaint(null);
+        plot.setLabelShadowPaint(null);
+        plot.setLabelOutlinePaint(null);
+
+        plot.setSectionPaint("Income", new Color(255,255,255,0));
+        plot.setSimpleLabels(true);
+
+        plot.setSectionDepth(0.6);
+
+        plot.setCenterTextMode(CenterTextMode.FIXED);
+        plot.setCenterTextFont(new Font("Arial", Font.BOLD, 22));
+        plot.setCenterTextColor(Color.black);
+        plot.setCenterText("Total income: " + totalIncome);
+
+        plot.setSeparatorsVisible(false);
+
+
+
+        chartPanel = new ChartPanel(chart);
         chartPanel.setLayout(new BorderLayout());
 
         contentPanel.add(chartPanel);
@@ -178,11 +234,14 @@ public class TrackerMain {
     // BUTTONS
     public void showHomeScreen() {
         contentPanel.removeAll();
+        makeRingChart();
         contentPanel.add(chartPanel, BorderLayout.CENTER);
         contentPanel.revalidate();
         frame.setVisible(true);
         frame.validate();
         frame.repaint();
+
+
     }
     public void showExpenseScreen() {
         contentPanel.removeAll();
@@ -214,6 +273,7 @@ public class TrackerMain {
             incomes.add(transaction);
         }
 
+
     }
     //END OF BUTTONS
 
@@ -236,7 +296,7 @@ public class TrackerMain {
 
     public void sortExpensesByCategory() {
         boolean sorted = false;
-        boolean changed = false;
+        boolean changed;
         Transaction temp;
         while (!sorted) {
             changed = false;

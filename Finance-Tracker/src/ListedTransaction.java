@@ -29,12 +29,14 @@ public class ListedTransaction {
         main = trackerMain;
         categories = trackerMain.getTransactionCategories();
 
+        String[] categoryNames = {"New Category"};
+
 
 
         JTextField costInput = new JTextField();
         JTextField nameInput = new JTextField();
         JTextArea descriptionInput = new JTextArea();
-        JComboBox categoryInput = new JComboBox();
+        JComboBox categoryInput = new JComboBox(categoryNames);
 
         TextPrompt costPrompt = new TextPrompt("Enter cost", costInput);
         TextPrompt namePrompt = new TextPrompt("Enter name", nameInput);
@@ -89,6 +91,7 @@ public class ListedTransaction {
 
         gridPanel.add(checkBox);
         gridPanel.add(errorMessage);
+        gridPanel.add(categoryInput);
         gridPanel.add(addButton);
         panelToAddTo.add(gridPanel, BorderLayout.CENTER);
 

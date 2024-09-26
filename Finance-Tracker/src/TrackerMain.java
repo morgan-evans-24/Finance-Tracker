@@ -8,20 +8,22 @@ import org.jfree.chart.JFreeChart; // Should not show an error if JAR is include
 
 import org.jfree.chart.plot.CenterTextMode;
 import org.jfree.chart.plot.RingPlot;
-import org.jfree.chart.renderer.category.StackedBarRenderer;
 import org.jfree.data.general.DefaultPieDataset;
+
+import com.formdev.flatlaf.FlatLightLaf;
 
 
 public class TrackerMain {
 
     double incomeSum = 0;
     double expenseSum = 0;
+    int noOfTransactions = 0;
 
 
 
     private final JFrame frame;
-    JPanel incomeGridPanel = new JPanel();
-    JPanel expenseGridPanel = new JPanel();
+    JPanel incomeGridPanel = new JPanel(new GridBagLayout());
+    JPanel expenseGridPanel = new JPanel(new GridBagLayout());
     JPanel navbarPanel = new JPanel();
 
     JPanel contentPanel = new JPanel();
@@ -53,8 +55,9 @@ public class TrackerMain {
         incomeTotalLabel.setText("No income");
 
         contentPanel.setLayout(new BorderLayout());
-        expenseGridPanel.setLayout(new GridLayout());
-        incomeGridPanel.setLayout(new GridLayout());
+
+        expenseGridPanel.setBackground(Color.yellow);
+
 
 //        //TESTING
 //        addTransaction(new Transaction(140, "new laptop", "asdasd", "07/08/1990", 1, "School", true));
@@ -127,6 +130,8 @@ public class TrackerMain {
         double totalExpenses = 0.0;
         double totalIncome;
 
+        boolean empty = false;
+
         for (int i = 0; i < expenses.size(); i++) {
             totalExpenses += expenses.get(i).getCost();
             if (i == 0) {      //Returns true if expense, false if income
@@ -153,6 +158,20 @@ public class TrackerMain {
         }
         totalIncome = currentTotal;
         dataset.setValue("Income", totalIncome-totalExpenses);
+        for (int i = 0; i <= dataset.getItemCount() - 1; i++) {
+            if (!dataset.getValue(i).equals(0.0)) {
+                break;
+
+            }
+
+            if (i == dataset.getItemCount() - 1) {
+
+                dataset.setValue("placeholder", 100);
+                dataset.remove("Income");
+                empty = true;
+            }
+        }
+
 
           //USE ARRAYLIST OF OBJECTS "TRANSACTIONS" TO TRACK THIS
 
@@ -175,6 +194,11 @@ public class TrackerMain {
             if (!expenses.get(i).getCategory().equals(currentCategory)) {
                 plot.setSectionOutlinePaint(currentCategory, Color.black);
                 plot.setSectionOutlineStroke(currentCategory, new BasicStroke(2.0f));
+                for (TransactionCategory c : categories) {
+                    if (c.getCategory().equals(currentCategory)) {
+                        plot.setSectionPaint(currentCategory, c.getColor());
+                    }
+                }
                 currentCategory = expenses.get(i).getCategory();
             }
         }
@@ -182,6 +206,12 @@ public class TrackerMain {
         plot.setShadowPaint(null);
         plot.setSectionOutlinePaint(currentCategory, Color.black);
         plot.setSectionOutlineStroke(currentCategory, new BasicStroke(2.0f));
+        for (TransactionCategory c : categories) {
+            if (c.getCategory().equals(currentCategory)) {
+                plot.setSectionPaint(currentCategory, c.getColor());
+            }
+        }
+
         plot.setOutlineVisible(false);
         plot.setLabelFont(new Font("Arial", Font.BOLD, 22));
 
@@ -198,7 +228,17 @@ public class TrackerMain {
         plot.setCenterTextMode(CenterTextMode.FIXED);
         plot.setCenterTextFont(new Font("Arial", Font.BOLD, 22));
         plot.setCenterTextColor(Color.black);
-        plot.setCenterText("Total income: " + totalIncome);
+        if (!empty) {
+            plot.setCenterText("Total income: " + totalIncome);
+        }
+        else {
+            plot.setCenterTextFont(new Font("Arial", Font.BOLD, 16));
+            System.out.println("why?");
+            plot.setCenterText("You dont have any transactions yet, head to the 'income' and 'expenses' tabs to add some!"); //Currently, no placeholder plot
+            plot.setSectionPaint("placeholder", null);
+            plot.setSectionOutlinePaint("placeholder", null);
+        }
+
 
         plot.setSeparatorsVisible(false);
 
@@ -207,7 +247,9 @@ public class TrackerMain {
         chartPanel = new ChartPanel(chart);
         chartPanel.setLayout(new BorderLayout());
 
+
         contentPanel.add(chartPanel);
+
     }
 
     private void navbarInit() {
@@ -229,6 +271,9 @@ public class TrackerMain {
         return frame;
     }
 
+    public int getNoOfTransactions() {
+        return noOfTransactions;
+    }
 
 
     // BUTTONS
@@ -272,6 +317,7 @@ public class TrackerMain {
         else {
             incomes.add(transaction);
         }
+        noOfTransactions++;
 
 
     }
@@ -320,6 +366,13 @@ public class TrackerMain {
 
 
     public static void main(String[] args) {
+
+        try {
+            UIManager.setLookAndFeel(new FlatLightLaf());
+        } catch (UnsupportedLookAndFeelException e) {
+            e.printStackTrace();
+        }
+
         new TrackerMain();
     }
 }

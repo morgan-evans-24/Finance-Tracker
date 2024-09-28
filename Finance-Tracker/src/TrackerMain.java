@@ -1,7 +1,18 @@
 import javax.swing.*;
 import java.awt.*;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.io.File;
+import java.io.FileReader;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.lang.reflect.Type;
 import java.util.ArrayList;
 
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.google.gson.Strictness;
+import com.google.gson.reflect.TypeToken;
 import org.jfree.chart.ChartFactory;
 import org.jfree.chart.ChartPanel;
 import org.jfree.chart.JFreeChart; // Should not show an error if JAR is included correctly
@@ -11,6 +22,8 @@ import org.jfree.chart.plot.RingPlot;
 import org.jfree.data.general.DefaultPieDataset;
 
 import com.formdev.flatlaf.FlatLightLaf;
+
+
 
 
 public class TrackerMain {
@@ -27,6 +40,7 @@ public class TrackerMain {
     JPanel navbarPanel = new JPanel();
 
     JPanel contentPanel = new JPanel();
+    JPanel contentGridBag = new JPanel();
     JScrollPane contentScrollPane = new JScrollPane(contentPanel);
 
 
@@ -43,36 +57,77 @@ public class TrackerMain {
 
     JLabel incomeTotalLabel = new JLabel();
     JLabel expenseTotalLabel = new JLabel();
+    
+    String[] timeFrames = {"Weekly", "Monthly", "Yearly"};
+    String currentTimeFrame = "Weekly";
+
+
+    
+    JComboBox timeFrameBox;
 
     ArrayList<Transaction> expenses = new ArrayList<>();
     ArrayList<Transaction> incomes = new ArrayList<>();
     ArrayList<TransactionCategory> categories = new ArrayList<>();
 
+    String expensesPath = "src/JSON/expenses.json";
+    String incomesPath = "src/JSON/incomes.json";
+    String categoriesPath = "src/JSON/categories.json";
 
+    Gson gson;
+
+    ListedTransaction listedTransaction;
 
     TrackerMain() {
+
+        gson = new GsonBuilder().registerTypeAdapter(Color.class, new ColorAdapter()).setStrictness(Strictness.LENIENT).setPrettyPrinting().create();
+
+        expenses = readJsonFile(expensesPath, new TypeToken<ArrayList<Transaction>>() //convert ArrayList<Transaction> into a Typetoken, because type erasure messes with Gson
+        {}.getType(), "Expenses");
+
+        incomes = readJsonFile(incomesPath, new TypeToken<ArrayList<Transaction>>()
+        {}.getType(), "Incomes");
+
+        categories = readJsonFile(categoriesPath, new TypeToken<ArrayList<TransactionCategory>>()
+        {}.getType(), "Categories");
+
+
+
+
+
+        timeFrameBox = new JComboBox(timeFrames);
+        
+        
         expenseTotalLabel.setText("No expenses");
         incomeTotalLabel.setText("No income");
 
+        contentGridBag.setLayout(new GridBagLayout());
         contentPanel.setLayout(new BorderLayout());
 
         expenseGridPanel.setBackground(Color.yellow);
 
 
-//        //TESTING
-//        addTransaction(new Transaction(140, "new laptop", "asdasd", "07/08/1990", 1, "School", true));
-//        addTransaction(new Transaction(132, "shopping", "asdasd", "07/08/1990", 1, "Groceries", true));
-//        addTransaction(new Transaction(80, "repairs", "asdasd", "07/08/1990", 1, "Car", true));
-//        addTransaction(new Transaction(250, "More shopping", "asdasd", "07/08/1990", 1, "Groceries", true));
-//        addTransaction(new Transaction(80, "fuel", "asdasd", "07/08/1990", 1, "Car", true));
-//        addTransaction(new Transaction(300, "loans", "asdasd", "07/08/1990", 1, "School", true));
-//        addTransaction(new Transaction(1500, "Job", "asdasd", "07/08/1990", 1, "Job", false));
+
         sortExpensesByCategory();
 
-        makeRingChart();
+
 
 
         navbarInit();
+
+        timeFrameBox.addActionListener(new ActionListener() {
+            public void actionPerformed(ActionEvent e) {
+                if (timeFrameBox.getSelectedItem() == "Weekly") {
+                    currentTimeFrame = "Weekly";
+                }
+                else if (timeFrameBox.getSelectedItem() == "Monthly") {
+                    currentTimeFrame = "Monthly";
+                }
+                else if (timeFrameBox.getSelectedItem() == "Yearly") {
+                    currentTimeFrame = "Yearly";
+                }
+                showHomeScreen();
+            }
+        });
 
 
         frame = new JFrame();
@@ -110,7 +165,7 @@ public class TrackerMain {
 
 
 
-
+//        listedTransaction.makeCards(expenseGridPanel, frame, this);
 
 
 
@@ -119,9 +174,34 @@ public class TrackerMain {
         frame.repaint();
         showHomeScreen();
 
+        
     }
 
-    private void makeRingChart() {
+
+    private <T> ArrayList<T> readJsonFile(String path, Type type, String fileType) { //fileType string is just used for console messages
+        ArrayList<T> list = new ArrayList<>();
+        File file = new File(path);
+        if (!file.exists() || file.length() == 0) {
+            System.out.println(fileType + " file is empty or does not exist, starting with empty file");
+            return list;  // Return empty list
+        }
+
+        try (FileReader reader = new FileReader(file)) { //This FileReader moves through the Json files line by line
+            list = gson.fromJson(reader, type); //This line deserializes the data and turns it into an array of Transactions
+            if (list == null) { //Type == arraylist<Transaction>, we just use type to get around type erasure
+                list = new ArrayList<>();  // Return empty list if file has null content
+            }
+        } catch (IOException e) {
+            System.out.println(fileType + " file not found or could not be read, starting with empty file");
+        }
+        return list;
+    }
+
+
+
+
+    private void makeRingChart(JPanel panelToAddTo, GridBagConstraints constraints) {
+
 
         DefaultPieDataset dataset = new DefaultPieDataset();
 
@@ -130,125 +210,195 @@ public class TrackerMain {
         double totalExpenses = 0.0;
         double totalIncome;
 
-        boolean empty = false;
+        double thisCost;
+
+        boolean empty = true;
 
         for (int i = 0; i < expenses.size(); i++) {
-            totalExpenses += expenses.get(i).getCost();
+
+            thisCost = expenses.get(i).getCost();
+            System.out.println(expenses.get(i).getReoccurringFrequency().toString());
+            if (currentTimeFrame.equals("Weekly")) {
+                if (expenses.get(i).getReoccurringFrequency().toString().equals("YEARLY")) {
+                    thisCost = thisCost / 52;
+                }
+                if (expenses.get(i).getReoccurringFrequency().toString().equals("MONTHLY")) {
+                    thisCost = thisCost / 4;
+                }
+                if (expenses.get(i).getReoccurringFrequency().toString().equals("CUSTOM")) {
+                    thisCost = thisCost * ((double) 7 /expenses.get(i).getCustomReoccurringFrequency());
+                }
+            }
+            if (currentTimeFrame.equals("Monthly")) {
+                if (expenses.get(i).getReoccurringFrequency().toString().equals("YEARLY")) {
+                    thisCost = thisCost / 12;
+                }
+                if (expenses.get(i).getReoccurringFrequency().toString().equals("WEEKLY")) {
+                    thisCost = thisCost * 4;
+                }
+                if (expenses.get(i).getReoccurringFrequency().toString().equals("CUSTOM")) {
+                    thisCost = thisCost * ((double) 30 /expenses.get(i).getCustomReoccurringFrequency());
+                }
+            }
+            if (currentTimeFrame.equals("Yearly")) {
+                if (expenses.get(i).getReoccurringFrequency().toString().equals("MONTHLY")) {
+                    thisCost = thisCost * 12;
+                }
+                if (expenses.get(i).getReoccurringFrequency().toString().equals("WEEKLY")) {
+                    thisCost = thisCost * 52;
+                }
+                if (expenses.get(i).getReoccurringFrequency().toString().equals("CUSTOM")) {
+                    thisCost = thisCost * ((double) 365 /expenses.get(i).getCustomReoccurringFrequency());
+                }
+            }
+
+
+            totalExpenses += thisCost;
             if (i == 0) {      //Returns true if expense, false if income
                 currentCategory = expenses.get(i).getCategory();
-                currentTotal = expenses.get(i).getCost();
+                currentTotal = thisCost;
                 continue;
             }
             if (!expenses.get(i).getCategory().equals(currentCategory)) {
                 dataset.setValue(currentCategory, currentTotal);
+                empty = false;
                 currentCategory = expenses.get(i).getCategory();
-                currentTotal = expenses.get(i).getCost();
+                currentTotal = thisCost;
             }
             else {
-                currentTotal += expenses.get(i).getCost();
+                currentTotal += thisCost;
             }
 
         }
-        dataset.setValue(currentCategory, currentTotal);
-
-        currentTotal = 0.0;
-
-        for (Transaction income : incomes) {
-            currentTotal += income.getCost();
-        }
-        totalIncome = currentTotal;
-        dataset.setValue("Income", totalIncome-totalExpenses);
-        for (int i = 0; i <= dataset.getItemCount() - 1; i++) {
-            if (!dataset.getValue(i).equals(0.0)) {
-                break;
-
-            }
-
-            if (i == dataset.getItemCount() - 1) {
-
-                dataset.setValue("placeholder", 100);
-                dataset.remove("Income");
-                empty = true;
-            }
+        if (currentTotal != 0) {
+            dataset.setValue(currentCategory, currentTotal);
+            empty = false;
         }
 
-
-          //USE ARRAYLIST OF OBJECTS "TRANSACTIONS" TO TRACK THIS
-
-        JFreeChart chart = ChartFactory.createRingChart(
-                "Test Ring Chart",
-                dataset,
-                false,
-                true,
-                false
-        );
+        if (!empty) {
+            currentTotal = 0.0;
 
 
-        RingPlot plot = (RingPlot) chart.getPlot();
-        currentCategory = "";
-        for (int i = 0; i < expenses.size(); i++) {
-            if (i == 0) {
-                currentCategory = expenses.get(i).getCategory();
-                continue;
-            }
-            if (!expenses.get(i).getCategory().equals(currentCategory)) {
-                plot.setSectionOutlinePaint(currentCategory, Color.black);
-                plot.setSectionOutlineStroke(currentCategory, new BasicStroke(2.0f));
-                for (TransactionCategory c : categories) {
-                    if (c.getCategory().equals(currentCategory)) {
-                        plot.setSectionPaint(currentCategory, c.getColor());
+            for (Transaction income : incomes) {
+                thisCost = income.getCost();
+                if (currentTimeFrame.equals("Weekly")) {
+                    if (income.getReoccurringFrequency().toString().equals("YEARLY")) {
+                        thisCost = thisCost / 52;
+                    }
+                    if (income.getReoccurringFrequency().toString().equals("MONTHLY")) {
+                        thisCost = thisCost / 4;
+                    }
+                    if (income.getReoccurringFrequency().toString().equals("CUSTOM")) {
+                        thisCost = thisCost * ((double) 7 /income.getCustomReoccurringFrequency());
                     }
                 }
-                currentCategory = expenses.get(i).getCategory();
+                if (currentTimeFrame.equals("Monthly")) {
+                    if (income.getReoccurringFrequency().toString().equals("YEARLY")) {
+                        thisCost = thisCost / 12;
+                    }
+                    if (income.getReoccurringFrequency().toString().equals("WEEKLY")) {
+                        thisCost = thisCost * 4;
+                    }
+                    if (income.getReoccurringFrequency().toString().equals("CUSTOM")) {
+                        thisCost = thisCost * ((double) 30 /income.getCustomReoccurringFrequency());
+                    }
+                }
+                if (currentTimeFrame.equals("Yearly")) {
+                    if (income.getReoccurringFrequency().toString().equals("MONTHLY")) {
+                        thisCost = thisCost * 12;
+                    }
+                    if (income.getReoccurringFrequency().toString().equals("WEEKLY")) {
+                        thisCost = thisCost * 52;
+                    }
+                    if (income.getReoccurringFrequency().toString().equals("CUSTOM")) {
+                        thisCost = thisCost * ((double) 365 /income.getCustomReoccurringFrequency());
+                    }
+                }
+                currentTotal += thisCost;
             }
-        }
+            totalIncome = currentTotal;
+            dataset.setValue("Remaining Income", totalIncome-totalExpenses);
 
-        plot.setShadowPaint(null);
-        plot.setSectionOutlinePaint(currentCategory, Color.black);
-        plot.setSectionOutlineStroke(currentCategory, new BasicStroke(2.0f));
-        for (TransactionCategory c : categories) {
-            if (c.getCategory().equals(currentCategory)) {
-                plot.setSectionPaint(currentCategory, c.getColor());
+
+
+            //USE ARRAYLIST OF OBJECTS "TRANSACTIONS" TO TRACK THIS
+
+            JFreeChart chart = ChartFactory.createRingChart(
+                    "Test Ring Chart",
+                    dataset,
+                    false,
+                    true,
+                    false
+            );
+
+
+            RingPlot plot = (RingPlot) chart.getPlot();
+            currentCategory = "";
+            for (int i = 0; i < expenses.size(); i++) {
+                if (i == 0) {
+                    currentCategory = expenses.get(i).getCategory();
+                    continue;
+                }
+                if (!expenses.get(i).getCategory().equals(currentCategory)) {
+                    plot.setSectionOutlinePaint(currentCategory, Color.black);
+                    plot.setSectionOutlineStroke(currentCategory, new BasicStroke(2.0f));
+                    for (TransactionCategory c : categories) {
+                        if (c.getCategory().equals(currentCategory)) {
+                            plot.setSectionPaint(currentCategory, c.getColor());
+                        }
+                    }
+                    currentCategory = expenses.get(i).getCategory();
+                }
             }
-        }
 
-        plot.setOutlineVisible(false);
-        plot.setLabelFont(new Font("Arial", Font.BOLD, 22));
+            plot.setShadowPaint(null);
+            plot.setSectionOutlinePaint(currentCategory, Color.black);
+            plot.setSectionOutlineStroke(currentCategory, new BasicStroke(2.0f));
+            for (TransactionCategory c : categories) {
+                if (c.getCategory().equals(currentCategory)) {
+                    plot.setSectionPaint(currentCategory, c.getColor());
+                }
+            }
+
+            plot.setOutlineVisible(false);
+            plot.setLabelFont(new Font("Arial", Font.BOLD, 22));
 
 
-        plot.setLabelBackgroundPaint(null);
-        plot.setLabelShadowPaint(null);
-        plot.setLabelOutlinePaint(null);
+            plot.setLabelBackgroundPaint(null);
+            plot.setLabelShadowPaint(null);
+            plot.setLabelOutlinePaint(null);
 
-        plot.setSectionPaint("Income", new Color(255,255,255,0));
-        plot.setSimpleLabels(true);
+            plot.setSectionPaint("Remaining Income", new Color(255,255,255,0));
+            plot.setSimpleLabels(true);
 
-        plot.setSectionDepth(0.6);
+            plot.setSectionDepth(0.6);
 
-        plot.setCenterTextMode(CenterTextMode.FIXED);
-        plot.setCenterTextFont(new Font("Arial", Font.BOLD, 22));
-        plot.setCenterTextColor(Color.black);
-        if (!empty) {
+            plot.setCenterTextMode(CenterTextMode.FIXED);
+            plot.setCenterTextFont(new Font("Arial", Font.BOLD, 22));
+            plot.setCenterTextColor(Color.black);
             plot.setCenterText("Total income: " + totalIncome);
+
+
+
+            plot.setSeparatorsVisible(false);
+
+
+
+            chartPanel = new ChartPanel(chart);
+            panelToAddTo.add(chartPanel, constraints);
         }
         else {
-            plot.setCenterTextFont(new Font("Arial", Font.BOLD, 16));
-            System.out.println("why?");
-            plot.setCenterText("You dont have any transactions yet, head to the 'income' and 'expenses' tabs to add some!"); //Currently, no placeholder plot
-            plot.setSectionPaint("placeholder", null);
-            plot.setSectionOutlinePaint("placeholder", null);
+
+            JLabel emptyLabel = new JLabel("No expenses, head to the 'Expenses' tab to add some!");
+            emptyLabel.setHorizontalAlignment(JLabel.CENTER);
+            emptyLabel.setFont(new Font("Arial", Font.BOLD, 22));
+            panelToAddTo.add(emptyLabel, constraints);
         }
 
 
-        plot.setSeparatorsVisible(false);
 
 
 
-        chartPanel = new ChartPanel(chart);
-        chartPanel.setLayout(new BorderLayout());
-
-
-        contentPanel.add(chartPanel);
 
     }
 
@@ -279,8 +429,26 @@ public class TrackerMain {
     // BUTTONS
     public void showHomeScreen() {
         contentPanel.removeAll();
-        makeRingChart();
-        contentPanel.add(chartPanel, BorderLayout.CENTER);
+        contentGridBag.removeAll();
+
+        GridBagConstraints constraints = new GridBagConstraints();
+        constraints.gridx = 0;
+        constraints.gridy = 0;
+        constraints.weightx = 1;
+        constraints.weighty = 1;
+        constraints.gridwidth = 1;
+        constraints.gridheight = 1;
+        constraints.fill = GridBagConstraints.BOTH;
+
+        GridBagConstraints constraints2 = new GridBagConstraints();
+        constraints2.gridx = 0;
+        constraints2.gridy = 0;
+        constraints2.anchor = GridBagConstraints.NORTHEAST;
+        constraints2.insets = new Insets(40, 0, 0, 40);
+        contentGridBag.add(timeFrameBox, constraints2);
+        makeRingChart(contentGridBag, constraints);
+        contentPanel.add(contentGridBag, BorderLayout.CENTER);
+
         contentPanel.revalidate();
         frame.setVisible(true);
         frame.validate();
@@ -313,9 +481,26 @@ public class TrackerMain {
         if (transaction.isExpense())
         {
             expenses.add(transaction);
+
+            try (FileWriter writer = new FileWriter(expensesPath)) {
+                gson.toJson(expenses, writer);
+                System.out.println("Updated expenses file to " + expensesPath);
+            } catch (IOException e) {
+                System.out.println("Error writing to expenses file");
+                e.printStackTrace();
+            }
+
         }
         else {
             incomes.add(transaction);
+
+            try (FileWriter writer = new FileWriter(incomesPath)) {
+                gson.toJson(incomes, writer);
+                System.out.println("Updated incomes file to " + incomesPath);
+            } catch (IOException e) {
+                System.out.println("Error writing to incomes file");
+                e.printStackTrace();
+            }
         }
         noOfTransactions++;
 
@@ -333,6 +518,13 @@ public class TrackerMain {
 
     public void addTransactionCategory(String name, Color color) {
         categories.add(new TransactionCategory(name, color)); //CALLED FROM LISTED TRANSACTION WHEN NEW TRANSACTION IS SELECTED
+        try (FileWriter writer = new FileWriter(categoriesPath)) {
+            gson.toJson(categories, writer);
+            System.out.println("Updated categories file to " + categoriesPath);
+        } catch (IOException e) {
+            System.out.println("Error writing to categories file");
+            e.printStackTrace();
+        }
     }
 
     public ArrayList<TransactionCategory> getTransactionCategories() {

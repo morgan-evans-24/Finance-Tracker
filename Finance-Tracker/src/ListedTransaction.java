@@ -2,6 +2,7 @@ import com.toedter.calendar.JDateChooser;
 import javax.swing.*;
 import javax.swing.border.LineBorder;
 import javax.swing.colorchooser.AbstractColorChooserPanel;
+import javax.swing.text.AbstractDocument;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -20,6 +21,8 @@ public class ListedTransaction {
     String category;
     ArrayList<TransactionCategory> categories;
     int reoccurring;
+    String reoccurringString;
+    int reoccurringXlyNumber;
     JPanel gridPanel;
     JPanel fillerPanel;
     JLabel errorMessage;
@@ -33,15 +36,26 @@ public class ListedTransaction {
         isExpense = expense;
         main = trackerMain;
         categories = trackerMain.getTransactionCategories();
+        reoccurring = -1;
+        reoccurringString = "";
+        reoccurringXlyNumber = 0;
 
-        String[] categoryNames = {"", "<New Category>"};
+        ArrayList<String> categoryNames = new ArrayList<>();
+        categoryNames.add("");
+        categoryNames.add("<New Category>");
+
+        for (TransactionCategory c : categories) {
+            categoryNames.add(c.getCategory());
+        }
+
 
 
 
         JTextField costInput = new JTextField();
+        ((AbstractDocument) costInput.getDocument()).setDocumentFilter(new PositiveDoubleFilter());
         JTextField nameInput = new JTextField();
         JTextArea descriptionInput = new JTextArea();
-        JComboBox categoryInput = new JComboBox(categoryNames);
+        JComboBox categoryInput = new JComboBox(categoryNames.toArray());
 
 
 
@@ -61,12 +75,13 @@ public class ListedTransaction {
         }
 
         JCheckBox checkBox = new JCheckBox();
-        JRadioButton reoccurringWeekly = new JRadioButton("Weekly?");
-        JRadioButton reoccurringMonthly = new JRadioButton("Monthly?");
-        JRadioButton reoccurringYearly = new JRadioButton("Yearly?");
+        JRadioButton reoccurringWeekly = new JRadioButton("Weekly");
+        JRadioButton reoccurringMonthly = new JRadioButton("Monthly");
+        JRadioButton reoccurringYearly = new JRadioButton("Yearly");
         JRadioButton reoccurringXly = new JRadioButton("Custom");
 
         JTextField reoccurringXlyInput = new JTextField();
+        ((AbstractDocument) reoccurringXlyInput.getDocument()).setDocumentFilter(new PositiveIntFilter());
         TextPrompt reoccurringXlyPrompt = new TextPrompt("Happens every 'x' days (Enter x)", reoccurringXlyInput);
         reoccurringXlyPrompt.setPreferredSize(new Dimension(100,50));
         ButtonGroup reoccurringGroup = new ButtonGroup();
@@ -107,6 +122,24 @@ public class ListedTransaction {
                     reoccurring = 1;
                     int result = JOptionPane.showConfirmDialog(null, reoccurringPanel,
                             "How often does this transaction reoccur?", JOptionPane.OK_CANCEL_OPTION);
+                    if (reoccurringYearly.isSelected()) {
+                        reoccurringString = "YEARLY";
+                    }
+                    if (reoccurringMonthly.isSelected()) {
+                        reoccurringString = "MONTHLY";
+                    }
+                    if (reoccurringWeekly.isSelected()) {
+                        reoccurringString = "WEEKLY";
+                    }
+                    if (reoccurringXly.isSelected()) {
+                        reoccurringString = "CUSTOM";
+                    }
+                    System.out.println(reoccurringString);
+
+                    if (reoccurringString.equals("Custom")) {
+                        reoccurringXlyNumber = Integer.parseInt(reoccurringXlyInput.getText());
+                    }
+                    System.out.println(reoccurringXlyNumber);
                 }
                 else {
                     reoccurring = 0;
@@ -151,7 +184,8 @@ public class ListedTransaction {
             if (checkBox.isSelected()) {
                 reoccurring = 1;
             }
-            makeCard();
+            makeCard(cost, name, description, date, reoccurring, reoccurringString, reoccurringXlyNumber, category,
+                    isExpense, gridPanel, frame, main);
 
         });
 
@@ -224,7 +258,6 @@ public class ListedTransaction {
 
         mainConstraints.gridx = 0;
         mainConstraints.gridy = main.getNoOfTransactions();
-//        System.out.println(main.getNoOfTransactions());
         mainConstraints.fill = GridBagConstraints.HORIZONTAL;
         panelToAddTo.add(gridPanel, mainConstraints);
 
@@ -237,7 +270,7 @@ public class ListedTransaction {
         fillerPanel = new JPanel();
         fillerPanel.setBackground(Color.BLACK);
         panelToAddTo.add(fillerPanel, mainConstraints);
-        System.out.println(panelToAddTo.getComponentZOrder(fillerPanel));
+        System.out.println(panelToAddTo.getComponentZOrder(fillerPanel)); //Rearrange this so I can refill transactions pages on startup
 
 
 
@@ -247,10 +280,18 @@ public class ListedTransaction {
 
     }
 
+    public void makeCards(ArrayList<Transaction> expenses, ArrayList<Transaction> incomes, JPanel gridPanel, JFrame frame, TrackerMain main) {
+        for (Transaction e : expenses) {
+            makeCard(e.getCost(), e.getName(), e.getDescription(), e.getDate(), e.getReoccurring(),
+                    e.getReoccurringFrequency().name(), e.getCustomReoccurringFrequency(), e.getCategory(), e.isExpense(), gridPanel, frame, main);
+        }
+
+    }
 
 
+    private void makeCard(double cost, String  name, String description, String date, int reoccurring, String
+            reoccurringString, int reoccurringXlyNumber, String category,boolean isExpense, JPanel gridPanel, JFrame frame, TrackerMain main) {
 
-    private void makeCard() {
         JLabel reoccurringLabel;
 
         JLabel costLabel;
@@ -299,7 +340,8 @@ public class ListedTransaction {
             main.updateTotals(0, cost);
         }
 
-        Transaction transaction = new Transaction(cost, name, description, date, reoccurring, category, isExpense);
+        Transaction transaction = new Transaction(cost, name, description, date, reoccurring, reoccurringString, reoccurringXlyNumber, category, isExpense);
+        System.out.println(reoccurringString + " " + reoccurringXlyNumber);
         main.addTransaction(transaction);
 
 

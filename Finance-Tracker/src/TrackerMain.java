@@ -30,7 +30,8 @@ public class TrackerMain {
 
     double incomeSum = 0;
     double expenseSum = 0;
-    int noOfTransactions = 0;
+    int noOfExpenses = 0;
+    int noOfIncomes = 0;
 
 
 
@@ -83,15 +84,14 @@ public class TrackerMain {
 
         expenses = readJsonFile(expensesPath, new TypeToken<ArrayList<Transaction>>() //convert ArrayList<Transaction> into a Typetoken, because type erasure messes with Gson
         {}.getType(), "Expenses");
+        noOfExpenses = expenses.size();
 
         incomes = readJsonFile(incomesPath, new TypeToken<ArrayList<Transaction>>()
         {}.getType(), "Incomes");
+        noOfIncomes = incomes.size();
 
         categories = readJsonFile(categoriesPath, new TypeToken<ArrayList<TransactionCategory>>()
         {}.getType(), "Categories");
-
-
-
 
 
         timeFrameBox = new JComboBox(timeFrames);
@@ -141,14 +141,14 @@ public class TrackerMain {
 
         expenseButton = new JButton("add expense");
         expenseButton.addActionListener(e -> {
-            new ListedTransaction(expenseGridPanel, true, this);
+            new ListedTransaction(expenseGridPanel, true, this, expenses);
             frame.validate();
             frame.repaint();
 
         });
         incomeButton = new JButton("add income");
         incomeButton.addActionListener(e -> {
-            new ListedTransaction(incomeGridPanel, false, this);
+            new ListedTransaction(incomeGridPanel, false, this, incomes);
             frame.validate();
             frame.repaint();
 
@@ -165,7 +165,9 @@ public class TrackerMain {
 
 
 
-//        listedTransaction.makeCards(expenseGridPanel, frame, this);
+        new ListedTransaction(expenseGridPanel, this, frame, expenses);
+        new ListedTransaction(incomeGridPanel, this, frame, incomes);
+
 
 
 
@@ -217,7 +219,6 @@ public class TrackerMain {
         for (int i = 0; i < expenses.size(); i++) {
 
             thisCost = expenses.get(i).getCost();
-            System.out.println(expenses.get(i).getReoccurringFrequency().toString());
             if (currentTimeFrame.equals("Weekly")) {
                 if (expenses.get(i).getReoccurringFrequency().toString().equals("YEARLY")) {
                     thisCost = thisCost / 52;
@@ -421,10 +422,20 @@ public class TrackerMain {
         return frame;
     }
 
-    public int getNoOfTransactions() {
-        return noOfTransactions;
+    public int getNoOfExpenses() {
+        return noOfExpenses;
+    }
+    public int getNoOfIncomes() {
+        return noOfIncomes;
     }
 
+    public ArrayList<Transaction> getExpenses() {
+        return expenses;
+    }
+
+    public ArrayList<Transaction> getIncomes() {
+        return incomes;
+    }
 
     // BUTTONS
     public void showHomeScreen() {
@@ -476,7 +487,7 @@ public class TrackerMain {
         frame.validate();
         frame.repaint();
     }
-
+    //END OF BUTTONS
     public void addTransaction(Transaction transaction) {
         if (transaction.isExpense())
         {
@@ -489,7 +500,7 @@ public class TrackerMain {
                 System.out.println("Error writing to expenses file");
                 e.printStackTrace();
             }
-
+            noOfExpenses++;
         }
         else {
             incomes.add(transaction);
@@ -501,12 +512,27 @@ public class TrackerMain {
                 System.out.println("Error writing to incomes file");
                 e.printStackTrace();
             }
+            noOfIncomes++;
         }
-        noOfTransactions++;
-
 
     }
-    //END OF BUTTONS
+
+    public void raiseNoExpenses() {
+        noOfExpenses++;
+    }
+
+    public void raiseNoIncomes() {
+        noOfIncomes++;
+    }
+
+    public void lowerNoExpenses() {
+        noOfExpenses--;
+    }
+
+    public void lowerNoIncomes() {
+        noOfIncomes--;
+    }
+
 
 
     public void updateTotals(double expenses, double incomes) {
@@ -517,7 +543,7 @@ public class TrackerMain {
     }
 
     public void addTransactionCategory(String name, Color color) {
-        categories.add(new TransactionCategory(name, color)); //CALLED FROM LISTED TRANSACTION WHEN NEW TRANSACTION IS SELECTED
+        categories.add(new TransactionCategory(name, color));
         try (FileWriter writer = new FileWriter(categoriesPath)) {
             gson.toJson(categories, writer);
             System.out.println("Updated categories file to " + categoriesPath);
@@ -531,6 +557,28 @@ public class TrackerMain {
         return categories;
     }
 
+    public void removeTransactionFromJson(int index, boolean isExpense) {
+        if (isExpense) {
+            expenses.remove(index);
+            try (FileWriter writer = new FileWriter(expensesPath)) {
+                gson.toJson(expenses, writer);
+                System.out.println("Updated expenses file to " + expensesPath);
+            } catch (IOException e) {
+                System.out.println("Error writing to expenses file");
+            }
+            lowerNoExpenses();
+        }
+        else {
+            incomes.remove(index);
+            try (FileWriter writer = new FileWriter(incomesPath)) {
+                gson.toJson(incomes, writer);
+                System.out.println("Updated expenses file to " + incomesPath);
+            } catch (IOException e) {
+                System.out.println("Error writing to expenses file");
+            }
+            lowerNoIncomes();
+        }
+    }
 
     public void sortExpensesByCategory() {
         boolean sorted = false;
@@ -549,9 +597,6 @@ public class TrackerMain {
             if (!changed) {
                 sorted = true;
             }
-        }
-        for (int i = 0; i < expenses.size() - 1; i++) {
-            System.out.println(expenses.get(i).getCategory());   //USED TO TEST
         }
     }
 

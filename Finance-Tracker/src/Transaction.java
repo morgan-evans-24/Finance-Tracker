@@ -86,7 +86,7 @@ public class Transaction {
             return customReoccurringFrequency;
         }
         else {
-            return 0;
+            return -1;
         }
     }
 

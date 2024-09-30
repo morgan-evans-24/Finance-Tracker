@@ -4,14 +4,10 @@ import javax.swing.border.LineBorder;
 import javax.swing.colorchooser.AbstractColorChooserPanel;
 import javax.swing.text.AbstractDocument;
 import java.awt.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 import java.awt.event.ItemEvent;
-import java.awt.event.ItemListener;
 import java.util.ArrayList;
 import java.util.Date;
 
-@SuppressWarnings("ALL")
 public class ListedTransaction {
     public double cost;
     boolean isExpense;
@@ -19,18 +15,32 @@ public class ListedTransaction {
     String description;
     String date;
     String category;
+
     ArrayList<TransactionCategory> categories;
+
+    ArrayList<Transaction> transactions;
+
+
     int reoccurring;
     String reoccurringString;
     int reoccurringXlyNumber;
-    JPanel gridPanel;
+
+    JPanel cardPanel;
+    ArrayList<JPanel> expenseCardPanels = new ArrayList<>();
+    ArrayList<JPanel> incomeCardPanels = new ArrayList<>();
+
     JPanel fillerPanel;
+
+    JPanel buttonPanel;
+    JButton deleteButton;
+    JButton editButton;
+
     JLabel errorMessage;
     JFrame frame;
 
     TrackerMain main;
 
-    public ListedTransaction(JPanel panelToAddTo, boolean expense, TrackerMain trackerMain) {
+    public ListedTransaction(JPanel panelToAddTo, boolean expense, TrackerMain trackerMain, ArrayList<Transaction> transactions) {
         errorMessage = new JLabel();
         frame = trackerMain.getFrame();
         isExpense = expense;
@@ -39,8 +49,14 @@ public class ListedTransaction {
         reoccurring = -1;
         reoccurringString = "";
         reoccurringXlyNumber = 0;
+        this.transactions = transactions;
+        this.main = trackerMain;
+
+        int noOfTransactions;
 
         ArrayList<String> categoryNames = new ArrayList<>();
+
+
         categoryNames.add("");
         categoryNames.add("<New Category>");
 
@@ -89,16 +105,7 @@ public class ListedTransaction {
 
         reoccurringXlyInput.setVisible(false);
 
-        reoccurringXly.addItemListener(new ItemListener() {
-            public void itemStateChanged(ItemEvent e) {
-                if (e.getStateChange() == ItemEvent.SELECTED) {
-                    reoccurringXlyInput.setVisible(true);
-                }
-                else {
-                    reoccurringXlyInput.setVisible(false);
-                }
-            }
-        });
+        reoccurringXly.addItemListener(e -> reoccurringXlyInput.setVisible(e.getStateChange() == ItemEvent.SELECTED));
 
         reoccurringGroup.add(reoccurringWeekly);
         reoccurringGroup.add(reoccurringMonthly);
@@ -115,50 +122,45 @@ public class ListedTransaction {
 
         checkBox.setText("Reoccurring?");
 
-        checkBox.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                if (checkBox.isSelected()) {
-                    reoccurring = 1;
-                    int result = JOptionPane.showConfirmDialog(null, reoccurringPanel,
-                            "How often does this transaction reoccur?", JOptionPane.OK_CANCEL_OPTION);
-                    if (reoccurringYearly.isSelected()) {
-                        reoccurringString = "YEARLY";
-                    }
-                    if (reoccurringMonthly.isSelected()) {
-                        reoccurringString = "MONTHLY";
-                    }
-                    if (reoccurringWeekly.isSelected()) {
-                        reoccurringString = "WEEKLY";
-                    }
-                    if (reoccurringXly.isSelected()) {
-                        reoccurringString = "CUSTOM";
-                    }
-                    System.out.println(reoccurringString);
+        checkBox.addActionListener(e -> {
+            if (checkBox.isSelected()) {
+                reoccurring = 1;
+                JOptionPane.showConfirmDialog(null, reoccurringPanel,
+                        "How often does this transaction reoccur?", JOptionPane.OK_CANCEL_OPTION);
+                if (reoccurringYearly.isSelected()) {
+                    reoccurringString = "YEARLY";
+                }
+                if (reoccurringMonthly.isSelected()) {
+                    reoccurringString = "MONTHLY";
+                }
+                if (reoccurringWeekly.isSelected()) {
+                    reoccurringString = "WEEKLY";
+                }
+                if (reoccurringXly.isSelected()) {
+                    reoccurringString = "CUSTOM";
+                }
+                System.out.println(reoccurringString);
 
-                    if (reoccurringString.equals("Custom")) {
-                        reoccurringXlyNumber = Integer.parseInt(reoccurringXlyInput.getText());
-                    }
-                    System.out.println(reoccurringXlyNumber);
+                if (reoccurringString.equals("CUSTOM")) {
+                    reoccurringXlyNumber = Integer.parseInt(reoccurringXlyInput.getText());
                 }
-                else {
-                    reoccurring = 0;
-                }
+                System.out.println(reoccurringXlyNumber);
+            }
+            else {
+                reoccurring = 0;
             }
         });
 
 
-        categoryInput.addActionListener(new ActionListener() {
-            public void actionPerformed(ActionEvent e) {
-                if (categoryInput.getSelectedItem() == "<New Category>") {
-                    String newCategory = JOptionPane.showInputDialog("Enter new category name");
-                    int result = JOptionPane.showConfirmDialog(null, colorChooser,
-                            "Choose a colour for the category", JOptionPane.OK_CANCEL_OPTION);
-                    if (newCategory != null) {
-                        categoryInput.addItem(newCategory);
-                        categoryInput.setSelectedItem(newCategory);
-                        main.addTransactionCategory(newCategory, colorChooser.getColor());
-                    }
+        categoryInput.addActionListener(e -> {
+            if (categoryInput.getSelectedItem() == "<New Category>") {
+                String newCategory = JOptionPane.showInputDialog("Enter new category name");
+                JOptionPane.showConfirmDialog(null, colorChooser,
+                        "Choose a colour for the category", JOptionPane.OK_CANCEL_OPTION);
+                if (newCategory != null) {
+                    categoryInput.addItem(newCategory);
+                    categoryInput.setSelectedItem(newCategory);
+                    main.addTransactionCategory(newCategory, colorChooser.getColor());
                 }
             }
         });
@@ -184,52 +186,58 @@ public class ListedTransaction {
             if (checkBox.isSelected()) {
                 reoccurring = 1;
             }
-            makeCard(cost, name, description, date, reoccurring, reoccurringString, reoccurringXlyNumber, category,
-                    isExpense, gridPanel, frame, main);
+            makeCard(panelToAddTo);
 
         });
 
-        gridPanel = new JPanel(new GridBagLayout());
+        if (isExpense) {
+            noOfTransactions = main.getNoOfExpenses();
+        }
+        else {
+            noOfTransactions = main.getNoOfIncomes();
+        }
+
+        cardPanel = new JPanel(new GridBagLayout());
         GridBagConstraints constraints = new GridBagConstraints();
 
         constraints.insets = (new Insets(5, 0, 5, 0));
         constraints.weightx = 1.0;
         constraints.weighty = 1.0;
         constraints.gridwidth = 1;
-        gridPanel.setBackground(Color.CYAN);
+        cardPanel.setBackground(Color.CYAN);
         constraints.gridx = 0;
         constraints.gridy = 0;
         constraints.ipadx = 100; //Pads out the text fields
 
-        gridPanel.add(costInput, constraints);
+        cardPanel.add(costInput, constraints);
 
         constraints.gridx = 2;
-        gridPanel.add(nameInput, constraints);
+        cardPanel.add(nameInput, constraints);
 
         constraints.gridx = 0;
         constraints.gridy = 1;
-        gridPanel.add(descriptionInput, constraints);
+        cardPanel.add(descriptionInput, constraints);
 
         constraints.ipadx = 0; //Stops the other inputs expanding massively
         constraints.gridx = 2;
-        gridPanel.add(dateChooser, constraints);
+        cardPanel.add(dateChooser, constraints);
 
         constraints.gridx = 0;
         constraints.gridy = 2;
         constraints.weightx = 0.0;
         constraints.weighty = 0.0;
 
-        gridPanel.add(checkBox, constraints);
+        cardPanel.add(checkBox, constraints);
 
         constraints.weightx = 1;
         constraints.weighty = 1;
         constraints.gridx = 2;
-        gridPanel.add(errorMessage, constraints);
+        cardPanel.add(errorMessage, constraints);
 
         constraints.gridx = 0;
         constraints.gridy = 3;
         if (expense) {
-            gridPanel.add(categoryInput, constraints);
+            cardPanel.add(categoryInput, constraints);
         }
 
 
@@ -237,15 +245,15 @@ public class ListedTransaction {
         constraints.fill = GridBagConstraints.HORIZONTAL;
         constraints.gridx = 1;
         constraints.gridy = 4;
-        gridPanel.add(addButton, constraints);
+        cardPanel.add(addButton, constraints);
 
 
-        gridPanel.setBackground(Color.red);
-        gridPanel.setBorder(new LineBorder(Color.black));
+        cardPanel.setBackground(Color.red);
+        cardPanel.setBorder(new LineBorder(Color.black));
         GridBagConstraints mainConstraints = new GridBagConstraints();
         try {
-            panelToAddTo.remove(main.getNoOfTransactions());
-        } catch (Exception e) {
+            panelToAddTo.remove(noOfTransactions);
+        } catch (Exception ignored) {
 
         }
         mainConstraints.anchor = GridBagConstraints.NORTH;
@@ -256,12 +264,13 @@ public class ListedTransaction {
         mainConstraints.weightx = 1.0;
 
 
-        mainConstraints.gridx = 0;
-        mainConstraints.gridy = main.getNoOfTransactions();
-        mainConstraints.fill = GridBagConstraints.HORIZONTAL;
-        panelToAddTo.add(gridPanel, mainConstraints);
 
-        mainConstraints.gridy = main.getNoOfTransactions() + 1;
+        mainConstraints.gridx = 0;
+        mainConstraints.gridy = noOfTransactions;
+        mainConstraints.fill = GridBagConstraints.HORIZONTAL;
+        panelToAddTo.add(cardPanel, mainConstraints);
+
+        mainConstraints.gridy = noOfTransactions + 1;
         mainConstraints.weighty = 1.0;
 
 
@@ -270,9 +279,75 @@ public class ListedTransaction {
         fillerPanel = new JPanel();
         fillerPanel.setBackground(Color.BLACK);
         panelToAddTo.add(fillerPanel, mainConstraints);
-        System.out.println(panelToAddTo.getComponentZOrder(fillerPanel)); //Rearrange this so I can refill transactions pages on startup
+    }
+
+    public ListedTransaction(JPanel panelToAddTo, TrackerMain main, JFrame frame, ArrayList<Transaction> transactions) {
+
+        System.out.println("how many of these?");
+        System.out.println(transactions.size());
+
+        int noOfTransactions;
+        this.transactions = transactions;
+        this.main = main;
+        this.frame = frame;
+
+        if (transactions.isEmpty()) {
+            return;
+        }
+        for (int i = 0; i < transactions.size(); i++) {
+            Transaction t = transactions.get(i);
+            if (t.isExpense()) {
+                noOfTransactions = main.getNoOfExpenses();
+            }
+            else {
+                noOfTransactions = main.getNoOfIncomes();
+            }
+            System.out.println(noOfTransactions + "Debug" + t.isExpense());
+
+            cardPanel = new JPanel(new GridBagLayout());
+
+            GridBagConstraints mainConstraints = new GridBagConstraints();
+            try {
+                panelToAddTo.remove(i);
+            } catch (Exception ignored) {
+
+            }
+            mainConstraints.anchor = GridBagConstraints.NORTH;
+            mainConstraints.insets = (new Insets(0, 0, 0, 0));
+            mainConstraints.ipady = 0;
 
 
+            mainConstraints.weightx = 1.0;
+
+
+            mainConstraints.gridx = 0;
+            mainConstraints.gridy = i;
+            mainConstraints.fill = GridBagConstraints.HORIZONTAL;
+            panelToAddTo.add(cardPanel, mainConstraints);
+
+            mainConstraints.gridy = i + 1;
+            mainConstraints.weighty = 1.0;
+
+
+
+
+            fillerPanel = new JPanel();
+
+            fillerPanel.setBackground(Color.BLACK);
+
+            panelToAddTo.add(fillerPanel, mainConstraints);
+
+            cost = t.getCost();
+            name = t.getName();
+            description = t.getDescription();
+            date = t.getDate();
+            reoccurring = t.getReoccurring();
+            reoccurringString = t.getReoccurringFrequency().name();
+            reoccurringXlyNumber = t.getCustomReoccurringFrequency();
+            category = t.getCategory();
+            isExpense = t.isExpense();
+            makeCardWithoutAdding(main, frame, panelToAddTo);
+        }
 
 
 
@@ -280,58 +355,9 @@ public class ListedTransaction {
 
     }
 
-    public void makeCards(ArrayList<Transaction> expenses, ArrayList<Transaction> incomes, JPanel gridPanel, JFrame frame, TrackerMain main) {
-        for (Transaction e : expenses) {
-            makeCard(e.getCost(), e.getName(), e.getDescription(), e.getDate(), e.getReoccurring(),
-                    e.getReoccurringFrequency().name(), e.getCustomReoccurringFrequency(), e.getCategory(), e.isExpense(), gridPanel, frame, main);
-        }
+    private void makeCard(JPanel panelToAddTo) {
 
-    }
-
-
-    private void makeCard(double cost, String  name, String description, String date, int reoccurring, String
-            reoccurringString, int reoccurringXlyNumber, String category,boolean isExpense, JPanel gridPanel, JFrame frame, TrackerMain main) {
-
-        JLabel reoccurringLabel;
-
-        JLabel costLabel;
-        JLabel nameLabel = new JLabel(name);
-        JLabel descriptionLabel = new JLabel(description);
-        JLabel dateLabel = new JLabel(date);
-
-        GridBagConstraints constraints = new GridBagConstraints();
-        constraints.insets = (new Insets(0, 0, 0, 0));
-        constraints.ipady = 0;
-        constraints.gridy = main.getNoOfTransactions() - 1;
-        constraints.weightx = 1.0;
-
-
-        gridPanel.removeAll();
-        gridPanel.setLayout(new GridLayout(4, 2));
-
-        if (reoccurring == 1) {
-            reoccurringLabel = new JLabel("reoccurring");
-        }
-        else {
-            reoccurringLabel = new JLabel("One-time");
-        }
-
-        costLabel = new JLabel("Cost = £" + cost);
-
-
-        gridPanel.add(costLabel, constraints);
-        gridPanel.add(nameLabel, constraints);
-        gridPanel.add(descriptionLabel, constraints);
-        gridPanel.add(dateLabel, constraints);
-        gridPanel.add(reoccurringLabel, constraints);
-
-
-        frame.validate();
-        frame.repaint();
-
-
-        gridPanel.revalidate();
-        gridPanel.repaint();
+        make(main, frame, panelToAddTo);
 
         if (isExpense) {
             main.updateTotals(cost, 0);
@@ -341,9 +367,156 @@ public class ListedTransaction {
         }
 
         Transaction transaction = new Transaction(cost, name, description, date, reoccurring, reoccurringString, reoccurringXlyNumber, category, isExpense);
-        System.out.println(reoccurringString + " " + reoccurringXlyNumber);
+
         main.addTransaction(transaction);
 
 
     }
+
+
+
+    private void makeCardWithoutAdding(TrackerMain main, JFrame frame, JPanel panelToAddTo) {
+
+        make(main, frame, panelToAddTo);
+
+        if (isExpense) {
+            main.updateTotals(cost, 0);
+//            main.raiseNoExpenses();
+        }
+        else {
+            main.updateTotals(0, cost);
+//            main.raiseNoIncomes();
+        }
+
+    }
+
+    private void make(TrackerMain main, JFrame frame, JPanel panelToAddTo) {
+        JLabel reoccurringLabel;
+
+        JLabel costLabel;
+        JLabel nameLabel;
+        JLabel descriptionLabel;
+        JLabel dateLabel;
+        int transactionNumber;
+        if (isExpense) {
+            transactionNumber = expenseCardPanels.size();
+        }
+        else {
+            transactionNumber = incomeCardPanels.size();
+        }
+
+        deleteButton = new JButton("Delete");
+
+        int finalTransactionNumber = transactionNumber;
+        deleteButton.addActionListener(e -> {
+            System.out.println(finalTransactionNumber + ", " + isExpense);
+            main.removeTransactionFromJson(finalTransactionNumber, isExpense);
+            resetTransactions(panelToAddTo);
+
+        });
+        editButton = new JButton("Edit");
+        editButton.addActionListener(e -> {
+            if (isExpense) {
+                System.out.println(main.getExpenses().get(finalTransactionNumber).getName() + " ooga booga");
+                //THIS WORKS, Implement rest of it lol
+            }
+        });
+
+        buttonPanel = new JPanel(new FlowLayout());
+        buttonPanel.add(deleteButton);
+        buttonPanel.add(editButton);
+
+        GridBagConstraints constraints = new GridBagConstraints();
+        constraints.insets = (new Insets(5, 0, 5, 0));
+        constraints.fill = GridBagConstraints.VERTICAL;
+        constraints.anchor = GridBagConstraints.CENTER;
+
+
+        constraints.weightx = 1.0;
+        constraints.weighty = 1.0;
+
+
+        cardPanel.removeAll();
+        cardPanel.setLayout(new GridBagLayout());
+
+        costLabel = new JLabel("<html><b>Cost</b>: £" + cost + "</html>");
+        nameLabel = new JLabel("<html><b>Name</b>: " + name + "</html>");
+        String descriptionString = "<b>Description</b>: " + description;
+        descriptionString = wrapText(descriptionString, 40);
+        descriptionLabel = new JLabel(descriptionString);
+        dateLabel = new JLabel("<html><b>Date</b>: " + date + "</html>");
+        if (reoccurring == 1) {
+            if (!reoccurringString.equals("CUSTOM")) {
+                reoccurringLabel = new JLabel("<html><b>Transaction Type</b>: " + reoccurringString + "</html>");
+            }
+            else {
+                reoccurringLabel = new JLabel("Repeats every " + reoccurringXlyNumber + " days");
+            }
+
+        }
+        else {
+            reoccurringLabel = new JLabel("<html><b>Not Reoccurring</b></html>");
+        }
+
+
+        constraints.gridx = 0;
+        constraints.gridy = 0;
+        cardPanel.add(costLabel, constraints);
+        constraints.gridx = 1;
+        constraints.gridy = 0;
+        cardPanel.add(nameLabel, constraints);
+        constraints.gridx = 0;
+        constraints.gridy = 1;
+        cardPanel.add(descriptionLabel, constraints);
+        constraints.gridx = 1;
+        constraints.gridy = 1;
+        cardPanel.add(dateLabel, constraints);
+        constraints.gridx = 0;
+        constraints.gridy = 2;
+        cardPanel.add(reoccurringLabel, constraints);
+        constraints.gridx = 1;
+        constraints.gridy = 2;
+        cardPanel.add(buttonPanel, constraints);
+        cardPanel.setBorder(new LineBorder(Color.black));
+
+        if (isExpense) {
+            expenseCardPanels.add(cardPanel);
+        }
+        else {
+            incomeCardPanels.add(cardPanel);
+        }
+
+
+        frame.validate();
+        frame.repaint();
+
+
+        cardPanel.revalidate();
+        cardPanel.repaint();
+    }
+
+    public String wrapText(String text, int wordLength) {
+        StringBuilder result = new StringBuilder("<html>");
+        int count = 0;
+
+        for (String word : text.split(" ")) {
+            if (count + word.length() > wordLength) {
+                result.append("<br>");
+                count = 0;
+            }
+            result.append(word).append(" ");
+            count += word.length() + 1;
+        }
+
+        result.append("</html>");
+        return result.toString();
+
+    }
+
+    public void resetTransactions(JPanel panelToAddTo) {
+        System.out.println("Resetting transactions");
+        panelToAddTo.removeAll();
+        new ListedTransaction(panelToAddTo, main, frame, transactions);
+    }
+
 }

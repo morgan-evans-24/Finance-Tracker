@@ -1,0 +1,13 @@
+[
+  {
+    "cost": 14.0,
+    "name": "Test",
+    "description": "test",
+    "date": "02/10/2024",
+    "reoccurring": 1,
+    "reoccurringFrequency": "WEEKLY",
+    "customReoccurringFrequency": 0,
+    "category": "Test",
+    "isExpense": true
+  }
+]

@@ -59,7 +59,6 @@ public class ListedTransaction {
 
         categoryNames.add("");
         categoryNames.add("<New Category>");
-
         for (TransactionCategory c : categories) {
             categoryNames.add(c.getCategory());
         }
@@ -197,6 +196,40 @@ public class ListedTransaction {
             noOfTransactions = main.getNoOfIncomes();
         }
 
+        editCardPanel(expense, costInput, nameInput, descriptionInput, dateChooser, checkBox, categoryInput, addButton);
+
+        GridBagConstraints mainConstraints = new GridBagConstraints();
+        try {
+            panelToAddTo.remove(noOfTransactions);
+        } catch (Exception ignored) {
+
+        }
+        mainConstraints.anchor = GridBagConstraints.NORTH;
+        mainConstraints.insets = (new Insets(0, 0, 0, 0));
+        mainConstraints.ipady = 0;
+
+
+        mainConstraints.weightx = 1.0;
+
+
+
+        mainConstraints.gridx = 0;
+        mainConstraints.gridy = noOfTransactions;
+        mainConstraints.fill = GridBagConstraints.HORIZONTAL;
+        panelToAddTo.add(cardPanel, mainConstraints);
+
+        mainConstraints.gridy = noOfTransactions + 1;
+        mainConstraints.weighty = 1.0;
+
+
+
+
+        fillerPanel = new JPanel();
+        fillerPanel.setBackground(Color.BLACK);
+        panelToAddTo.add(fillerPanel, mainConstraints);
+    }
+
+    private void editCardPanel(boolean expense, JTextField costInput, JTextField nameInput, JTextArea descriptionInput, JDateChooser dateChooser, JCheckBox checkBox, JComboBox categoryInput, JButton addButton) {
         cardPanel = new JPanel(new GridBagLayout());
         GridBagConstraints constraints = new GridBagConstraints();
 
@@ -241,44 +274,13 @@ public class ListedTransaction {
         }
 
 
-
         constraints.fill = GridBagConstraints.HORIZONTAL;
         constraints.gridx = 1;
         constraints.gridy = 4;
         cardPanel.add(addButton, constraints);
 
 
-        cardPanel.setBackground(Color.red);
         cardPanel.setBorder(new LineBorder(Color.black));
-        GridBagConstraints mainConstraints = new GridBagConstraints();
-        try {
-            panelToAddTo.remove(noOfTransactions);
-        } catch (Exception ignored) {
-
-        }
-        mainConstraints.anchor = GridBagConstraints.NORTH;
-        mainConstraints.insets = (new Insets(0, 0, 0, 0));
-        mainConstraints.ipady = 0;
-
-
-        mainConstraints.weightx = 1.0;
-
-
-
-        mainConstraints.gridx = 0;
-        mainConstraints.gridy = noOfTransactions;
-        mainConstraints.fill = GridBagConstraints.HORIZONTAL;
-        panelToAddTo.add(cardPanel, mainConstraints);
-
-        mainConstraints.gridy = noOfTransactions + 1;
-        mainConstraints.weighty = 1.0;
-
-
-
-
-        fillerPanel = new JPanel();
-        fillerPanel.setBackground(Color.BLACK);
-        panelToAddTo.add(fillerPanel, mainConstraints);
     }
 
     public ListedTransaction(JPanel panelToAddTo, TrackerMain main, JFrame frame, ArrayList<Transaction> transactions) {
@@ -418,6 +420,8 @@ public class ListedTransaction {
         editButton.addActionListener(e -> {
             if (isExpense) {
                 System.out.println(main.getExpenses().get(finalTransactionNumber).getName() + " ooga booga");
+
+//                editCardPanel(true, );
                 //THIS WORKS, Implement rest of it lol
             }
         });

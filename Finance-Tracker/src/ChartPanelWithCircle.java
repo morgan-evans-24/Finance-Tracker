@@ -1,9 +1,7 @@
 import org.jfree.chart.ChartPanel;
 import org.jfree.chart.JFreeChart;
-
-import javax.swing.*;
 import java.awt.*;
-import java.util.random.RandomGenerator;
+
 
 public class ChartPanelWithCircle extends ChartPanel {
     public ChartPanelWithCircle(JFreeChart chart) {

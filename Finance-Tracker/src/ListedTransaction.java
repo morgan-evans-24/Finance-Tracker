@@ -196,6 +196,7 @@ public class ListedTransaction {
             noOfTransactions = main.getNoOfIncomes();
         }
 
+        cardPanel = new JPanel(new GridBagLayout());
         editCardPanel(expense, costInput, nameInput, descriptionInput, dateChooser, checkBox, categoryInput, addButton);
 
         GridBagConstraints mainConstraints = new GridBagConstraints();
@@ -230,7 +231,6 @@ public class ListedTransaction {
     }
 
     private void editCardPanel(boolean expense, JTextField costInput, JTextField nameInput, JTextArea descriptionInput, JDateChooser dateChooser, JCheckBox checkBox, JComboBox categoryInput, JButton addButton) {
-        cardPanel = new JPanel(new GridBagLayout());
         GridBagConstraints constraints = new GridBagConstraints();
 
         constraints.insets = (new Insets(5, 0, 5, 0));
@@ -280,7 +280,7 @@ public class ListedTransaction {
         cardPanel.add(addButton, constraints);
 
 
-        cardPanel.setBorder(new LineBorder(Color.black));
+        cardPanel.setBorder(new LineBorder(Color.green));
     }
 
     public ListedTransaction(JPanel panelToAddTo, TrackerMain main, JFrame frame, ArrayList<Transaction> transactions) {
@@ -410,6 +410,7 @@ public class ListedTransaction {
         deleteButton = new JButton("Delete");
 
         int finalTransactionNumber = transactionNumber;
+        JPanel finalCardPanel = cardPanel;
         deleteButton.addActionListener(e -> {
             System.out.println(finalTransactionNumber + ", " + isExpense);
             main.removeTransactionFromJson(finalTransactionNumber, isExpense);
@@ -419,9 +420,166 @@ public class ListedTransaction {
         editButton = new JButton("Edit");
         editButton.addActionListener(e -> {
             if (isExpense) {
+                finalCardPanel.removeAll();
+                System.out.println(finalTransactionNumber + " final Trans number");
                 System.out.println(main.getExpenses().get(finalTransactionNumber).getName() + " ooga booga");
 
-//                editCardPanel(true, );
+
+
+                int noOfTransactions;
+                errorMessage = new JLabel();
+                categories = main.getTransactionCategories();
+
+                ArrayList<String> categoryNames = new ArrayList<>();
+
+
+                categoryNames.add("");
+                categoryNames.add("<New Category>");
+                for (TransactionCategory c : categories) {
+                    categoryNames.add(c.getCategory());
+                }
+
+
+                Transaction thisTransaction = main.getExpenses().get(finalTransactionNumber);
+
+                JTextField costInput = new JTextField();
+                costInput.setText(String.valueOf(thisTransaction.getCost()));
+                ((AbstractDocument) costInput.getDocument()).setDocumentFilter(new PositiveDoubleFilter());
+                JTextField nameInput = new JTextField();
+                nameInput.setText(thisTransaction.getName());
+                JTextArea descriptionInput = new JTextArea();
+                descriptionInput.setText(thisTransaction.getDescription());
+                JComboBox categoryInput = new JComboBox(categoryNames.toArray());
+                categoryInput.setSelectedItem(thisTransaction.getCategory());
+
+
+
+                TextPrompt costPrompt = new TextPrompt("Enter cost", costInput);
+                TextPrompt namePrompt = new TextPrompt("Enter name", nameInput);
+                TextPrompt descriptionPrompt = new TextPrompt("Enter description", descriptionInput);
+
+                JDateChooser dateChooser = new JDateChooser();
+                dateChooser.setDateFormatString(main.getExpenses().get(finalTransactionNumber).getDate());
+
+                JColorChooser colorChooser = new JColorChooser();
+                AbstractColorChooserPanel[] panels = colorChooser.getChooserPanels();
+
+                for (AbstractColorChooserPanel panel : panels) {
+                    if (!panel.getDisplayName().equals("HSV")) {
+                        colorChooser.removeChooserPanel(panel);
+                    }
+                }
+
+                JCheckBox checkBox = new JCheckBox();
+                JRadioButton reoccurringWeekly = new JRadioButton("Weekly");
+                JRadioButton reoccurringMonthly = new JRadioButton("Monthly");
+                JRadioButton reoccurringYearly = new JRadioButton("Yearly");
+                JRadioButton reoccurringXly = new JRadioButton("Custom");
+
+                JTextField reoccurringXlyInput = new JTextField();
+                ((AbstractDocument) reoccurringXlyInput.getDocument()).setDocumentFilter(new PositiveIntFilter());
+                TextPrompt reoccurringXlyPrompt = new TextPrompt("Happens every 'x' days (Enter x)", reoccurringXlyInput);
+                reoccurringXlyPrompt.setPreferredSize(new Dimension(100,50));
+                ButtonGroup reoccurringGroup = new ButtonGroup();
+                JPanel reoccurringPanel = new JPanel();
+
+                reoccurringXlyInput.setVisible(false);
+
+                reoccurringXly.addItemListener(i -> reoccurringXlyInput.setVisible(i.getStateChange() == ItemEvent.SELECTED));
+
+                reoccurringGroup.add(reoccurringWeekly);
+                reoccurringGroup.add(reoccurringMonthly);
+                reoccurringGroup.add(reoccurringYearly);
+                reoccurringGroup.add(reoccurringXly);
+
+                reoccurringPanel.setLayout(new GridLayout(5, 1));
+
+                reoccurringPanel.add(reoccurringWeekly);
+                reoccurringPanel.add(reoccurringMonthly);
+                reoccurringPanel.add(reoccurringYearly);
+                reoccurringPanel.add(reoccurringXly);
+                reoccurringPanel.add(reoccurringXlyInput);
+
+                checkBox.setText("Reoccurring?");
+
+                checkBox.addActionListener(i -> {
+                    if (checkBox.isSelected()) {
+                        reoccurring = 1;
+                        JOptionPane.showConfirmDialog(null, reoccurringPanel,
+                                "How often does this transaction reoccur?", JOptionPane.OK_CANCEL_OPTION);
+                        if (reoccurringYearly.isSelected()) {
+                            reoccurringString = "YEARLY";
+                        }
+                        if (reoccurringMonthly.isSelected()) {
+                            reoccurringString = "MONTHLY";
+                        }
+                        if (reoccurringWeekly.isSelected()) {
+                            reoccurringString = "WEEKLY";
+                        }
+                        if (reoccurringXly.isSelected()) {
+                            reoccurringString = "CUSTOM";
+                        }
+                        System.out.println(reoccurringString);
+
+                        if (reoccurringString.equals("CUSTOM")) {
+                            reoccurringXlyNumber = Integer.parseInt(reoccurringXlyInput.getText());
+                        }
+                        System.out.println(reoccurringXlyNumber);
+                    }
+                    else {
+                        reoccurring = 0;
+                    }
+                });
+
+
+                categoryInput.addActionListener(i -> {
+                    if (categoryInput.getSelectedItem() == "<New Category>") {
+                        String newCategory = JOptionPane.showInputDialog("Enter new category name");
+                        JOptionPane.showConfirmDialog(null, colorChooser,
+                                "Choose a colour for the category", JOptionPane.OK_CANCEL_OPTION);
+                        if (newCategory != null) {
+                            categoryInput.addItem(newCategory);
+                            categoryInput.setSelectedItem(newCategory);
+                            main.addTransactionCategory(newCategory, colorChooser.getColor());
+                        }
+                    }
+                });
+
+                JButton addButton = new JButton("Confirm");
+                addButton.addActionListener(i -> {
+                    Date dateFromChooser = dateChooser.getDate();
+
+                    try {
+                        cost = Double.parseDouble(costInput.getText());
+                    } catch (NumberFormatException e1) {
+                        errorMessage.setText("Please enter a valid number");
+                        return;
+                    }
+
+
+                    name = nameInput.getText();
+                    category = categoryInput.getSelectedItem().toString();
+                    description = descriptionInput.getText();
+                    date = String.format("%1$td/%1$tm/%1$tY", dateFromChooser);
+
+                    if (checkBox.isSelected()) {
+                        reoccurring = 1;
+                    }
+                    main.removeTransactionFromJson(finalTransactionNumber, isExpense);
+                    makeCard(panelToAddTo);
+                    resetTransactions(panelToAddTo);
+
+                });
+                cardPanel = finalCardPanel;
+                cardPanel.setBorder(new LineBorder(Color.red));
+                editCardPanel(true, costInput, nameInput, descriptionInput, dateChooser, checkBox, categoryInput, addButton);
+
+
+                cardPanel.revalidate();
+                cardPanel.repaint();
+
+                frame.validate();
+                frame.repaint();
                 //THIS WORKS, Implement rest of it lol
             }
         });

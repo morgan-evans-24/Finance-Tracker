@@ -44,7 +44,6 @@ public class TrackerMain {
     JPanel contentGridBag = new JPanel();
     JScrollPane contentScrollPane = new JScrollPane(contentPanel);
 
-
     ChartPanel chartPanel;
 
     JButton incomeButton;

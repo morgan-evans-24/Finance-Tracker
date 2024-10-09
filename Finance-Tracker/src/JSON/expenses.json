@@ -1,11 +1,22 @@
 [
   {
-    "cost": 14.0,
-    "name": "Test",
-    "description": "test",
-    "date": "02/10/2024",
-    "reoccurring": 1,
-    "reoccurringFrequency": "WEEKLY",
+    "cost": 12.0,
+    "name": "Test1",
+    "description": "asd",
+    "date": "null/null/null",
+    "reoccurring": -1,
+    "reoccurringFrequency": "NOT",
+    "customReoccurringFrequency": 0,
+    "category": "Test",
+    "isExpense": true
+  },
+  {
+    "cost": 32.0,
+    "name": "TEST2",
+    "description": "faf",
+    "date": "null/null/null",
+    "reoccurring": -1,
+    "reoccurringFrequency": "NOT",
     "customReoccurringFrequency": 0,
     "category": "Test",
     "isExpense": true

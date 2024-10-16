@@ -324,7 +324,7 @@ public class TrackerMain {
             //USE ARRAYLIST OF OBJECTS "TRANSACTIONS" TO TRACK THIS
 
             JFreeChart chart = ChartFactory.createRingChart(
-                    "Test Ring Chart",
+                    "",
                     dataset,
                     false,
                     true,
@@ -361,7 +361,7 @@ public class TrackerMain {
             }
 
             plot.setOutlineVisible(false);
-            plot.setLabelFont(new Font("Arial", Font.BOLD, 22));
+            plot.setLabelFont(new Font("Arial", Font.BOLD, 18));
 
 
             plot.setLabelBackgroundPaint(null);
@@ -406,9 +406,9 @@ public class TrackerMain {
         navbarPanel.setLayout(new GridLayout(4, 1));
         homeButton = new JButton("Home");
         homeButton.addActionListener(e -> showHomeScreen());
-        expenseTabButton = new JButton("Expense Tab");
+        expenseTabButton = new JButton("Expenses");
         expenseTabButton.addActionListener(e -> showExpenseScreen());
-        incomeTabButton = new JButton("Income Tab");
+        incomeTabButton = new JButton("Incomes");
         incomeTabButton.addActionListener(e -> showIncomeScreen());
         settingsButton = new JButton("Settings");
         navbarPanel.add(homeButton);

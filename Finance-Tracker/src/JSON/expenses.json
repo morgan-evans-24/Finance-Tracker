@@ -1,24 +1,35 @@
 [
   {
-    "cost": 32.0,
-    "name": "TEST2",
-    "description": "faf",
-    "date": "null/null/null",
-    "reoccurring": -1,
-    "reoccurringFrequency": "NOT",
+    "cost": 596.0,
+    "name": "Rent",
+    "description": "I have to pay rent",
+    "date": "06/10/2024",
+    "reoccurring": 1,
+    "reoccurringFrequency": "MONTHLY",
     "customReoccurringFrequency": 0,
-    "category": "Test",
+    "category": "Rent",
     "isExpense": true
   },
   {
-    "cost": 12.0,
-    "name": "Test1",
-    "description": "asd",
-    "date": "null/null/null",
-    "reoccurring": -1,
-    "reoccurringFrequency": "NOT",
+    "cost": 50.0,
+    "name": "Food",
+    "description": "Roughly one large food shop a week",
+    "date": "10/10/2024",
+    "reoccurring": 1,
+    "reoccurringFrequency": "WEEKLY",
     "customReoccurringFrequency": 0,
-    "category": "Test",
+    "category": "Food",
+    "isExpense": true
+  },
+  {
+    "cost": 100.0,
+    "name": "Fuel",
+    "description": "I don\u0027t drive my car as frequently, so £100 a month will be enough",
+    "date": "09/10/2024",
+    "reoccurring": 1,
+    "reoccurringFrequency": "MONTHLY",
+    "customReoccurringFrequency": 0,
+    "category": "Car",
     "isExpense": true
   }
 ]

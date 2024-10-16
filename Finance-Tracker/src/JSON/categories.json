@@ -2,5 +2,17 @@
   {
     "category": "Test",
     "color": -7680
+  },
+  {
+    "category": "Rent",
+    "color": -16711866
+  },
+  {
+    "category": "Food",
+    "color": -65536
+  },
+  {
+    "category": "Car",
+    "color": -16774145
   }
 ]
